@@ -1,0 +1,9 @@
+PACKAGE_NAME = "SConsArchives"
+ 
+env = Environment(JAVAC = "scalac", 
+                  JAVASUFFIX=".scala",
+                  JAVACLASSPATH = "/usr/share/java/scala-swing.jar",
+                  JAVACLASSDIR = "/usr/share/java/scala-swing.jar")
+env.Java('classes', 'src')
+env.Jar(PACKAGE_NAME, Glob("classes/*") + ["MANIFEST"])
+

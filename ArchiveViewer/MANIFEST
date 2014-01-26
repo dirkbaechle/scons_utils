@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Created-By: Dirk Baechle <dl9obn@darc.de>
+Main-Class: SConsArchives
+Class-Path: /usr/share/java/scala-swing.jar
+
