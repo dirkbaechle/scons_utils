@@ -59,31 +59,35 @@ case class SConsThread(val html : String,
 }
 
 /** Set of all threads in a mailing list like "devel" or "user". */
-class SConsThreadList(val fpath : String)
+class SConsThreadList
 {
-    // Parse the given XML file
-    val domElems = scala.xml.XML.loadFile(fpath)
-    val threads = (domElems \ "thread").map { thread =>
-                    val html = (thread \ "html").text
-                    val id = (thread \ "id").text
-                    val issue = (thread \ "issue").text
-                    val msglist = (thread \ "messages" \ "message").map {message =>
+    var threads : List[SConsThread] = Nil
+    /** Parse the given XML file and store the contained message threads. */
+    def loadXml(fpath : String)
+    {
+      val domElems = scala.xml.XML.loadFile(fpath)
+      this.threads = (domElems \ "thread").map { thread =>
+                      val html = (thread \ "html").text
+                      val id = (thread \ "id").text
+                      val issue = (thread \ "issue").text
+                      val msglist = (thread \ "messages" \ "message").map {message =>
 
-                      val header = (message \ "header").text
-                      val author = (message \ "author").text
-                      val fullname = (message \ "fullname").text
-                      val date = (message \ "date").text
-                      val content = (message \ "content").text
-                      SConsMessage(header, author, fullname, date, content)
-                    }
-                    SConsThread(html, id, issue, msglist)
-                  }
+                        val header = (message \ "header").text
+                        val author = (message \ "author").text
+                        val fullname = (message \ "fullname").text
+                        val date = (message \ "date").text
+                        val content = (message \ "content").text
+                        SConsMessage(header, author, fullname, date, content)
+                      }
+                      SConsThread(html, id, issue, msglist)
+                    }.toList
+    }
 
     /** Return a HashMap that results from counting the occurence of each word. */
     def getWordCounts(excludeWords : Set[String]) : HashMap[String, Int] =
     {
         var wordCounts = new HashMap[String, Int]
-        threads.foreach(t => t.collectWordCounts(wordCounts, excludeWords))
+        this.threads.foreach(t => t.collectWordCounts(wordCounts, excludeWords))
         return wordCounts        
     }
 }
@@ -108,9 +112,13 @@ class SConsArchives extends Frame
 {
   title = "SConsArchiveViewer"
 
+  // Data lists
+  val threadData = new SConsThreadList
+  var keywordData = new HashMap[String, Int]
+
   // Search panel
   val searchField = new TextField("")
-  val keyView = new ListView()
+  val keyView = new ListView[String]()
   val searchPanel = new BoxPanel(Orientation.Vertical) {
           // Search keywords
           contents += new BoxPanel(Orientation.Horizontal) {
@@ -121,11 +129,11 @@ class SConsArchives extends Frame
   }
  
   // Thread list
-  val threadView = new ListView()
+  val threadView = new ListView[String]()
   val threadPane = new ScrollPane(threadView)
 
   // Message list
-  val messageView = new ListView()
+  val messageView = new ListView[String]()
   val messagePane = new ScrollPane(messageView)
   
   // Editor panel
@@ -145,6 +153,15 @@ class SConsArchives extends Frame
   // rightComponent.preferredSize = 0 -> 0
   //
 
+
+  def updateKeywordList(keyprefix : String) {
+      var keylist = this.keywordData.toList.sortBy(_._2)(Ordering[Int].reverse)
+      if (!keyprefix.isEmpty)
+          this.keyView.listData = keylist.filter(k => k._1.toLowerCase().startsWith(keyprefix.toLowerCase())).map{ case (k, v) => k + ", " + v}
+      else
+          this.keyView.listData = keylist.map{ case (k, v) => k + ", " + v}
+  }
+
   // Adding menus
   val quitAction = Action("Quit") {System.exit(0)}
   val openAction = Action("Open") {
@@ -152,8 +169,11 @@ class SConsArchives extends Frame
     chooser.title = "Select input file"
     val result = chooser.showOpenDialog(null)
     if (result == FileChooser.Result.Approve) {
-      println("Approve -- " + chooser.selectedFile)
-      //Some(chooser.selectedFile)
+      println("Loading file -- " + chooser.selectedFile.getName)
+      threadData.loadXml(chooser.selectedFile.getName)
+      keywordData = threadData.getWordCounts(SConsCommon.commonEnglishWords)
+      searchField.text = ""
+      this.updateKeywordList(searchField.text)
     } else None
   }
   menuBar = new MenuBar{
