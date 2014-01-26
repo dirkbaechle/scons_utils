@@ -73,6 +73,6 @@ classpath=`get_classpath $SCALA_HOME`
 echo 'CLASSPATH:  '$classpath
 
 # start GUI
-java -cp $classpath SConsArchives
+java -cp $classpath Starter
 
 exit $?

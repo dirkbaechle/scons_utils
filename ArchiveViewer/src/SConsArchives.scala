@@ -2,6 +2,8 @@ import scala.xml._
 import scala.collection.mutable.HashMap
 import swing._
 
+import java.io.File
+
 object SConsCommon {
   // Set of common English words to exclude from the word counting.
   val commonEnglishWords : Set[String] = "a,able,about,across,after,all,almost,also,am,among,an,and,any,are,as,at,be,because,been,but,by,can,cannot,could,dear,did,do,does,either,else,ever,every,for,from,get,got,had,has,have,he,her,hers,him,his,how,however,i,if,in,into,is,it,its,just,least,let,like,likely,may,me,might,most,must,my,neither,no,nor,not,of,off,often,on,only,or,other,our,own,rather,said,say,says,she,should,since,so,some,than,that,the,their,them,then,there,these,they,this,tis,to,too,twas,us,wants,was,we,were,what,when,where,which,while,who,whom,why,will,with,would,yet,you,your".split(",").toSet
@@ -93,11 +95,74 @@ class SConsThreadList(val fpath : String)
 //println("User threads: "+user.threads.size)
 //println(user.getWordCounts(SConsCommon.commonEnglishWords).toList sortBy {_._2})
 
-object SConsArchives extends SimpleSwingApplication
-{
-  def top = new MainFrame {
-    contents = new Label("Hello world!")
+
+object Starter {
+  def main(args: Array[String]): Unit = {
+    val archiveViewer = new SConsArchives()
+    archiveViewer.visible = true
   }
 }
 
+
+class SConsArchives extends Frame
+{
+  title = "SConsArchiveViewer"
+
+  // Search panel
+  val searchField = new TextField("")
+  val keyView = new ListView()
+  val searchPanel = new BoxPanel(Orientation.Vertical) {
+          // Search keywords
+          contents += new BoxPanel(Orientation.Horizontal) {
+            contents += new Label("Search:")
+            contents += searchField
+            }
+          contents += new ScrollPane(keyView)
+  }
+ 
+  // Thread list
+  val threadView = new ListView()
+  val threadPane = new ScrollPane(threadView)
+
+  // Message list
+  val messageView = new ListView()
+  val messagePane = new ScrollPane(messageView)
+  
+  // Editor panel
+  val messageEditor = new EditorPane()
+  val editPane = new ScrollPane(messageEditor)
+
+  contents = new SplitPane(Orientation.Vertical,
+               // Left stack
+               new SplitPane(Orientation.Horizontal, searchPanel, threadPane),
+               new SplitPane(Orientation.Horizontal, messagePane, editPane))
+
+  // How to resize a SplitPane, based on ratio
+  //
+  // oneTouchExpandable = true
+  // resizeWeight = 0.5
+  // leftComponent.preferredSize = 0 -> 0
+  // rightComponent.preferredSize = 0 -> 0
+  //
+
+  // Adding menus
+  val quitAction = Action("Quit") {System.exit(0)}
+  val openAction = Action("Open") {
+    val chooser = new FileChooser(new File("."))
+    chooser.title = "Select input file"
+    val result = chooser.showOpenDialog(null)
+    if (result == FileChooser.Result.Approve) {
+      println("Approve -- " + chooser.selectedFile)
+      //Some(chooser.selectedFile)
+    } else None
+  }
+  menuBar = new MenuBar{
+         contents += new Menu("File") {
+            contents += new MenuItem(openAction)
+            contents += new Separator
+            contents += new MenuItem(quitAction)
+         }
+  } 
+
+}
 
