@@ -26,9 +26,14 @@ case class SConsMessage(val header : String,
 
     /** Scan the content of the message and update word counts with it. */ 
     def collectWordCounts(wordCounts : HashMap[String, Int],
+                          accept : SConsMessage => Boolean,
                           excludeWords : Set[String],
                           simplifyString : String => String = SConsCommon.defaultSimplify) 
     {
+        // Skip message, if accept criterion doesn't match
+        if (!accept(this))
+            return
+
         // Simplify content and split it into words
         val words = simplifyString(this.content).split("\\s").toList.map(_.asInstanceOf[String])
         // Process each word and update count hash
@@ -49,11 +54,12 @@ case class SConsThread(val html : String,
                   val issue : String,
                   val messages : Seq[SConsMessage])
 {
-    /** Scan all contained messages und update word counts accordingly. */
+    /** Scan all contained messages and update word counts accordingly. */
     def collectWordCounts(wordCounts : HashMap[String, Int],
+                          accept : SConsMessage => Boolean,
                           excludeWords : Set[String]) 
     {
-        this.messages.foreach(m => m.collectWordCounts(wordCounts, excludeWords))
+        this.messages.foreach(m => m.collectWordCounts(wordCounts, accept, excludeWords))
     }
 
 }
@@ -83,11 +89,13 @@ class SConsThreadList
                     }.toList
     }
 
-    /** Return a HashMap that results from counting the occurence of each word. */
-    def getWordCounts(excludeWords : Set[String]) : HashMap[String, Int] =
+    /** Return a HashMap that results from counting the occurence of each word,
+        in all the messages that get selected by the accept method. */
+    def getWordCounts(accept : SConsMessage => Boolean,
+                      excludeWords : Set[String]) : HashMap[String, Int] =
     {
         var wordCounts = new HashMap[String, Int]
-        this.threads.foreach(t => t.collectWordCounts(wordCounts, excludeWords))
+        this.threads.foreach(t => t.collectWordCounts(wordCounts, accept, excludeWords))
         return wordCounts        
     }
 }
@@ -162,6 +170,11 @@ class SConsArchives extends Frame
           this.keyView.listData = keylist.map{ case (k, v) => k + ", " + v}
   }
 
+  // Simple comparator that will match all messages
+  def acceptAll(m : SConsMessage) : Boolean = {
+      return true
+  }
+
   // Adding menus
   val quitAction = Action("Quit") {System.exit(0)}
   val openAction = Action("Open") {
@@ -171,7 +184,7 @@ class SConsArchives extends Frame
     if (result == FileChooser.Result.Approve) {
       println("Loading file -- " + chooser.selectedFile.getName)
       threadData.loadXml(chooser.selectedFile.getName)
-      keywordData = threadData.getWordCounts(SConsCommon.commonEnglishWords)
+      keywordData = threadData.getWordCounts(acceptAll, SConsCommon.commonEnglishWords)
       searchField.text = ""
       this.updateKeywordList(searchField.text)
     } else None

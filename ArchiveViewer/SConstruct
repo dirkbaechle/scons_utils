@@ -1,15 +1,13 @@
-import glob
-
 PACKAGE_NAME = "SConsArchives"
  
-env = Environment(JAVAC = "scalac", 
-                  JAVASUFFIX=".scala",
-                  JAVACLASSPATH = "/usr/share/java/scala-swing.jar",
-                  JAVACLASSDIR = "/usr/share/java/scala-swing.jar")
+env = Environment(tools=['default','scala']) 
+env.Append(SCALACLASSPATH = ['/usr/share/java/scala-swing.jar'],
+           SCALACLASSDIR = ['/usr/share/java/scala-swing.jar'])
 
-classes = env.Java('classes', 'src', JAVAVERSION='scala')
+classes = env.Scala('classes', 'src/SConsArchives.scala')
+print map(str, classes)
 class_files = Glob("classes/*.class")
-jar = env.Jar(PACKAGE_NAME, class_files + ["MANIFEST"])
+jar = env.Jar(PACKAGE_NAME, class_files + ["MANIFEST"], JARCHDIR='classes')
 env.Depends(jar, classes)
 
 env.Clean(jar, class_files)
